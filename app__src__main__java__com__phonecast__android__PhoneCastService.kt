@@ -103,7 +103,7 @@ class PhoneCastService : Service() {
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
             setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
             // A still screen produces no new frames; repeat the last one so the TV stream never stalls.
-            setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 100_000L)
+            setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 250_000L)
         }
         encoder = MediaCodec.createEncoderByType(MIME_TYPE)
         encoder!!.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
