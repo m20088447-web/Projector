@@ -177,7 +177,7 @@ class MpegTsHlsMuxer(
     private fun encodePts(value: Long): ByteArray {
         val pts = value and ((1L shl 33) - 1)
         return byteArrayOf(
-            (0x21 or (((pts shr 30) and 0x07) shl 1)).toByte(),
+            (0x21L or (((pts shr 30) and 0x07L) shl 1)).toByte(),
             (pts shr 22).toByte(),
             (((pts shr 15) and 0x7F) shl 1 or 1).toByte(),
             (pts shr 7).toByte(),
