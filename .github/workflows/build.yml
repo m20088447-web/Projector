@@ -10,6 +10,12 @@ jobs:
 
       - name: Arrange files into project layout
         run: |
+          # Browser downloads may be named "file (1).kt": let the newest copy replace the original.
+          for f in *' ('*').'*; do
+            [ -e "$f" ] || continue
+            clean="$(echo "$f" | sed -E 's/ \([0-9]+\)\././')"
+            mv -f "$f" "$clean"
+          done
           mkdir -p android
           for f in *__*; do
             p="android/${f//__//}"
