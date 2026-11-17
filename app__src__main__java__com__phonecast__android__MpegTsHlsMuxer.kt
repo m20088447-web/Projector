@@ -23,6 +23,8 @@ class MpegTsHlsMuxer(
     private var segmentStartUs = -1L
     private var lastPtsUs = -1L
     private var sequenceStarted = false
+    private var baseUs = -1L
+    private var lastOutUs = -1L
 
     @Volatile
     var packetListener: TsPacketListener? = null
@@ -51,10 +53,16 @@ class MpegTsHlsMuxer(
                 8 -> pps = nal
             }
         }
+        // Zero-based, strictly increasing timestamps: the raw encoder clock starts at device
+        // uptime (it can wrap the 33-bit TS clock) and may repeat or step back after a repeated frame.
+        if (baseUs < 0) baseUs = presentationTimeUs
+        var ptsUs = presentationTimeUs - baseUs + START_OFFSET_US
+        if (lastOutUs >= 0 && ptsUs <= lastOutUs) ptsUs = lastOutUs + 1_000L
+        lastOutUs = ptsUs
         val isIdr = nals.any { nalType(it) == 5 }
-        if (isIdr && current.size() > 0) finishSegment(presentationTimeUs)
+        if (isIdr && current.size() > 0) finishSegment(ptsUs)
         if (isIdr && current.size() == 0) {
-            segmentStartUs = presentationTimeUs
+            segmentStartUs = ptsUs
             writePsiTables()
             sequenceStarted = true
         }
@@ -66,9 +74,9 @@ class MpegTsHlsMuxer(
             if (nals.none { nalType(it) == 8 }) pps?.let { accessUnit.write(startCodeNal(it)) }
         }
         for (nal in nals) accessUnit.write(startCodeNal(nal))
-        val pts90k = (presentationTimeUs * 90L / 1000L) and ((1L shl 33) - 1)
+        val pts90k = (ptsUs * 90L / 1000L) and ((1L shl 33) - 1)
         writeVideoPes(accessUnit.toByteArray(), pts90k)
-        lastPtsUs = presentationTimeUs
+        lastPtsUs = ptsUs
     }
 
     @Synchronized
@@ -161,6 +169,7 @@ class MpegTsHlsMuxer(
     }
 
     private companion object {
+        const val START_OFFSET_US = 1_000_000L
         const val PTS_DELAY_90K = 18_000L // 200 ms between PCR clock and presentation time
     }
 
